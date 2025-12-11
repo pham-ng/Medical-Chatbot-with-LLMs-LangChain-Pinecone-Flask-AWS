@@ -34,32 +34,11 @@ pip install -r requirements.txt
 ```ini
 PINECONE_API_KEY = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 OPENAI_API_KEY = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+COHERE_API_KEY="xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
 ```
 
-
-```bash
-# run the following command to store embeddings to pinecone
-python -m src.store_index
-```
-
-```bash
-# Finally run the following command
-python app.py
-```
-
-Now,
-```bash
-open up localhost:
-```
-
-
-### Techstack Used:
-
-- Python
-- LangChain
-- Flask
-- GPT
-- Pinecone
+search
 
 
 
