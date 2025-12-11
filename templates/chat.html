@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tư vấn Y khoa - BV Bạch Mai</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo BV Bạch Mai">
+        <div class="header-info">
+            <h2>BỆNH VIỆN BẠCH MAI</h2>
+            <p>Hệ thống hỗ trợ tư vấn Y khoa AI</p>
+        </div>
+    </div>
+
+    <div class="chat-box" id="chat-box">
+        <div class="bot-container">
+            <div class="bot-avatar"><i class="fas fa-user-md"></i></div>
+            <div class="message bot-message">
+                Xin chào! Tôi là Trợ lý ảo AI của Bệnh viện Bạch Mai.<br>
+                Tôi có thể giúp gì cho sức khỏe của bạn hôm nay?
+            </div>
+        </div>
+    </div>
+
+    <div class="typing-indicator" id="loading">
+        <span></span><span></span><span></span>
+    </div>
+
+    <div class="chat-input-area">
+        
+        <label for="file-upload" class="upload-btn" title="Thêm tài liệu PDF">
+            <i class="fas fa-plus"></i>
+        </label>
+        <input type="file" id="file-upload" style="display: none;" accept=".pdf">
+        <input type="text" id="user-input" placeholder="Nhập triệu chứng hoặc câu hỏi..." autocomplete="off">
+        <button class="send-btn" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+
+</body>
+</html>
