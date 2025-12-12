@@ -1,4 +1,4 @@
-# Medical-Chatbot-with-LLMs-LangChain-Pinecone-Flask-AWS
+
 # BachMai-MedicalBot 🏥🩺
 
 **Hệ thống Tư vấn Y khoa & Hỗ trợ Chẩn đoán sơ bộ**  
