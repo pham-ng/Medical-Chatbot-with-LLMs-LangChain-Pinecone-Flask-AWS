@@ -51,16 +51,7 @@ Dữ liệu được tuyển chọn kỹ lưỡng từ các nguồn chính thố
 
 ### 🔍 Quy trình hoạt động (Pipeline)
 
-```mermaid
-graph TD
-    A[Người dùng đặt câu hỏi] --> B{Tự động phát hiện ngôn ngữ}
-    B -->|Tiếng Việt| C[Dịch sang tiếng Anh (nếu cần)]
-    B -->|Tiếng Anh| D[Hybrid Retrieval: BM25 + Pinecone]
-    C --> D
-    D --> E[Cohere Rerank]
-    E --> F[Prompt Engineering: Đóng vai Bác sĩ AI Bạch Mai]
-    F --> G[Trả lời bằng tiếng Việt + Trích dẫn nguồn + Cảnh báo y tế]
-    G --> H[Người dùng nhận kết quả ngay lập tức]
+<img width="1067" height="448" alt="image" src="https://github.com/user-attachments/assets/57d37c89-43fb-4067-9ff4-98b9227f7af9" />
 
 # How to run?
 ### STEPS:
