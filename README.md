@@ -187,3 +187,17 @@ open up localhost:
    - ECR_REPO
    - PINECONE_API_KEY
    - OPENAI_API_KEY
+
+### 🖥️ Giao Diện Người Dùng
+
+Hệ thống tích hợp một giao diện đơn giản, trực quan:
+
+Nhập câu hỏi liên quann đến sức khỏe
+Trình bày câu trả lời được sinh từ mô hình
+Cho phép tải thêm tài liệu chuyên khoa
+Tra cứu đa ngôn ngữ: Tiếng Việt và Tiếng Anh
+Trích dẫn nguồn đầy đủ, tránh hiện tượng Hallucination 
+<img width="1916" height="849" alt="image" src="https://github.com/user-attachments/assets/e65ec7c1-1b7c-4ec9-a390-b87c97fef576" />
+<img width="1907" height="861" alt="image" src="https://github.com/user-attachments/assets/0943602f-1fd7-4a93-8647-411d5d4b5ca2" />
+<img width="1919" height="867" alt="image" src="https://github.com/user-attachments/assets/44818749-6bb7-4ab7-8457-cbfebeb5c1bb" />
+
