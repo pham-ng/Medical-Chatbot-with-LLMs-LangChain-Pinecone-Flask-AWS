@@ -1,5 +1,66 @@
 # Medical-Chatbot-with-LLMs-LangChain-Pinecone-Flask-AWS
+# BachMai-MedicalBot 🏥🩺
 
+**Hệ thống Tư vấn Y khoa & Hỗ trợ Chẩn đoán sơ bộ**  
+Dựa trên kiến trúc **RAG (Retrieval-Augmented Generation)** hiện đại, mang phong cách phục vụ tận tâm của Bệnh viện Bạch Mai.
+
+Dự án giúp bệnh nhân và nhân viên y tế tra cứu nhanh, chính xác các thông tin về bệnh lý, triệu chứng, phác đồ điều trị, hướng dẫn chẩn đoán và thông tin thuốc – với trích dẫn nguồn rõ ràng và phản hồi theo thời gian thực.
+
+---
+
+### 📚 Bộ Dữ Liệu Y Khoa (Medical Dataset)
+
+Dữ liệu được tuyển chọn kỹ lưỡng từ các nguồn chính thống, uy tín bậc nhất tại Việt Nam:
+
+| Loại tài liệu                              | Nguồn chính thức                                      |
+|-------------------------------------------|-------------------------------------------------------|
+| Sách giáo khoa Y khoa kinh điển           | Bệnh học Nội khoa (ĐH Y Hà Nội), Triệu chứng học & Điều trị học |
+| Dược lý & Thông tin thuốc                  | Dược lý học, Dược thư Quốc gia Việt Nam               |
+| Hướng dẫn chẩn đoán & điều trị             | Phác đồ, quyết định chính thức của Bộ Y tế Việt Nam   |
+
+**Quy trình xử lý dữ liệu**
+
+- Thu thập & Upload: Hỗ trợ dữ liệu tĩnh ban đầu + Dynamic Ingestion (người dùng tự upload PDF mới qua giao diện)
+- Làm sạch: PyPDFLoader + PDFPlumber (loại bỏ header/footer, bảng biểu nhiễu)
+- Chunking: Recursive Character Text Splitter (500 tokens/chunk, overlap 100 tokens) để giữ ngữ cảnh y khoa phức tạp
+
+---
+
+### 🧠 Kiến trúc Hybrid RAG + Rerank (Tối ưu cho Y khoa tiếng Việt)
+
+| Thành phần               | Công nghệ & Mô tả                                                                                   |
+|--------------------------|-----------------------------------------------------------------------------------------------------|
+| **Hybrid Retriever**     | Kết hợp 40% BM25 (Keyword) + 60% Semantic Search (Pinecone)<br>→ Bắt chính xác cả tên thuốc, chỉ số xét nghiệm và ý định người dùng |
+| **Reranker**             | Cohere Rerank v3.0 Multilingual – sắp xếp lại kết quả để đoạn liên quan nhất lên đầu                |
+
+---
+
+### ⚙️ Công nghệ & Mô hình
+
+| Thành phần               | Công nghệ sử dụng                                          |
+|--------------------------|------------------------------------------------------------|
+| LLM (Generation)         | GPT-4o-mini (OpenAI) – nhanh, tiết kiệm chi phí            |
+| Vector Database          | Pinecone Serverless                                        |
+| Embedding Model          | `intfloat/multilingual-e5-base` (hiểu tốt tiếng Việt + Anh)|
+| Reranker                 | Cohere Rerank v3.0 Multilingual                            |
+| Backend                  | Python Flask + Waitress (production-ready)                 |
+| Frontend                 | HTML5/CSS3 (giao diện phong cách BV Bạch Mai) + Marked.js  |
+| Infrastructure           | Docker, AWS EC2, GitHub Actions (CI/CD)                    |
+
+---
+
+### 🔍 Quy trình hoạt động (Pipeline)
+
+```mermaid
+graph TD
+    A[Người dùng đặt câu hỏi] --> B{Tự động phát hiện ngôn ngữ}
+    B -->|Tiếng Việt| C[Dịch sang tiếng Anh (nếu cần)]
+    B -->|Tiếng Anh| D[Hybrid Retrieval: BM25 + Pinecone]
+    C --> D
+    D --> E[Cohere Rerank]
+    E --> F[Prompt Engineering: Đóng vai Bác sĩ AI Bạch Mai]
+    F --> G[Trả lời bằng tiếng Việt + Trích dẫn nguồn + Cảnh báo y tế]
+    G --> H[Người dùng nhận kết quả ngay lập tức]
 
 # How to run?
 ### STEPS:
