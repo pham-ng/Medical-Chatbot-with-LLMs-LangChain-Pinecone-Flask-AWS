@@ -9,21 +9,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     python3-dev \
     curl \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. Thiết lập thư mục làm việc
 WORKDIR /app
 
-# 3. Copy requirements và cài đặt thư viện trước (Tận dụng Cache)
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# 3. Upgrade pip, setuptools, wheel trước (Critical for compatibility)
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
-# 4. Copy toàn bộ code vào sau
+# 4. Copy requirements và cài đặt thư viện
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt || \
+    (pip install --no-cache-dir --no-deps -r requirements.txt && \
+     pip install --no-cache-dir numpy requests urllib3)
+
+# 5. Copy toàn bộ code vào sau
 COPY . .
 
-# 5. Mở port 5001 (Port của Flask/Waitress)
+# 6. Mở port 5001 (Port của Flask/Waitress)
 EXPOSE 5001
 
-# 6. Lệnh chạy (Đảm bảo tên file là app.py hoặc run.py tùy code bạn)
+# 7. Lệnh chạy (Đảm bảo tên file là app.py hoặc run.py tùy code bạn)
 CMD ["python", "app.py"]
