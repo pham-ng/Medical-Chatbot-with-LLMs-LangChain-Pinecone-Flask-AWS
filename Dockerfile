@@ -20,7 +20,9 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
 # 4. Copy requirements và cài đặt thư viện
 COPY requirements.txt .
-RUN RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt || \
+    (pip install --no-cache-dir --no-deps -r requirements.txt && \
+     pip install --no-cache-dir numpy requests urllib3)
 
 # 5. Copy toàn bộ code vào sau
 COPY . .
