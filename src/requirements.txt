@@ -13,4 +13,4 @@ rank_bm25
 cohere
 langchain-text-splitters
 openai
--e . 
+
