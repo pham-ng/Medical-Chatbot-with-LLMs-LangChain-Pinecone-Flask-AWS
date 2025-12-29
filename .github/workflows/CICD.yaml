@@ -29,50 +29,64 @@ jobs:
           ECR_REPOSITORY: ${{ secrets.ECR_REPO }}
           IMAGE_TAG: latest
         run: |
-          # Build và Push ảnh lên ECR
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          # Xuất biến output theo cú pháp mới của Github Actions
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
   Continuous-Deployment:
     needs: Continuous-Integration
-    runs-on: ubuntu-latest  # Sửa từ self-hosted thành ubuntu-latest để dùng SSH
+    runs-on: ubuntu-latest
     steps:
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@master
+        # --- PHẦN NÀY LÀ PHẦN MỚI THÊM VÀO ---
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          ECR_REPO: ${{ secrets.ECR_REPO }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          PINECONE_API_ENV: ${{ secrets.PINECONE_API_ENV }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
+        # ---------------------------------------
         with:
-          host: ${{ secrets.EC2_HOST }}      # IP của EC2
-          username: ${{ secrets.EC2_USER }}  # Thường là 'ubuntu'
-          key: ${{ secrets.EC2_SSH_KEY }}    # Key .pem
-          envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_DEFAULT_REGION,PINECONE_API_KEY,OPENAI_API_KEY,ECR_REGISTRY,ECR_REPOSITORY
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          # Liệt kê các biến môi trường muốn truyền sang server
+          envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_DEFAULT_REGION,AWS_ACCOUNT_ID,ECR_REPO,PINECONE_API_KEY,PINECONE_API_ENV,OPENAI_API_KEY,COHERE_API_KEY
           script: |
-            # 1. Cài đặt AWS CLI nếu chưa có (để login ECR)
+            # 1. Cài AWS CLI (nếu chưa có)
             if ! command -v aws &> /dev/null; then
                 sudo apt-get update && sudo apt-get install -y awscli
             fi
 
-            # 2. Đăng nhập vào ECR từ bên trong EC2
-            aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-            aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-            aws configure set default.region ${{ secrets.AWS_DEFAULT_REGION }}
+            # 2. Cấu hình AWS trên Server (Lấy từ biến envs truyền sang)
+            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+            aws configure set default.region $AWS_DEFAULT_REGION
             
-            # Lấy lệnh login và thực thi
-            aws ecr get-login-password --region ${{ secrets.AWS_DEFAULT_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com
+            # 3. Đăng nhập Docker ECR
+            aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
 
-            # 3. Pull ảnh mới về (Dùng biến ECR_REPO từ Secrets)
-            docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com/${{ secrets.ECR_REPO }}:latest
-
-            # 4. Dọn dẹp container cũ (Để tránh lỗi trùng tên/trùng cổng)
+            # 4. Dọn dẹp container cũ
             docker stop medical-bot || true
             docker rm medical-bot || true
+            # Xóa ảnh cũ cho đỡ tốn dung lượng
+            docker rmi $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO:latest || true
 
-            # 5. Chạy container mới (SỬA PORT Ở ĐÂY: 8080:5001)
+            # 5. Kéo ảnh mới về
+            docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO:latest
+
+            # 6. Chạy container (Map port 8080:5001)
             docker run -d \
               --name medical-bot \
+              --restart unless-stopped \
               -p 8080:5001 \
-              -e PINECONE_API_KEY="${{ secrets.PINECONE_API_KEY }}" \
-              -e PINECONE_API_ENV="${{ secrets.PINECONE_API_ENV }}" \
-              -e OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
-              -e COHERE_API_KEY="${{ secrets.COHERE_API_KEY }}" \
-              ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com/${{ secrets.ECR_REPO }}:latest
+              -e PINECONE_API_KEY="$PINECONE_API_KEY" \
+              -e PINECONE_API_ENV="$PINECONE_API_ENV" \
+              -e OPENAI_API_KEY="$OPENAI_API_KEY" \
+              -e COHERE_API_KEY="$COHERE_API_KEY" \
+              $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO:latest
