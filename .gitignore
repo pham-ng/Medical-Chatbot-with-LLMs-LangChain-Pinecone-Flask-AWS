@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.py[cod]
+venv/
+env/
+.vscode/
+.idea/
+data/*.pdf
+
+history.db
+__pycache__/
+*.pyc

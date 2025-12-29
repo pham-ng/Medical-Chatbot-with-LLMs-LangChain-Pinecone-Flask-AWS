@@ -2,6 +2,7 @@ import os
 from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
 from src.helper import medical_rag_pipeline, initialize_system, process_uploaded_file
+from src.database import init_db, save_message, get_history
 
 app = Flask(__name__)
 
@@ -19,6 +20,7 @@ def allowed_file(filename):
 
 # --- KHỞI TẠO HỆ THỐNG LẦN ĐẦU ---
 print("⏳ Đang khởi tạo hệ thống lần đầu...")
+init_db()  # Initialize database
 initialize_system()
 print("✅ Hệ thống đã sẵn sàng!")
 
@@ -30,9 +32,22 @@ def index():
 def chat():
     data = request.get_json()
     user_input = data.get("msg")
+    session_id = data.get("session_id")
+    
     if not user_input:
         return jsonify({"answer": "Vui lòng nhập câu hỏi."})
+    
+    # Save user message to database
+    if session_id:
+        save_message(session_id, "user", user_input)
+    
+    # Get response from RAG pipeline
     response_text = medical_rag_pipeline(user_input)
+    
+    # Save bot response to database
+    if session_id:
+        save_message(session_id, "bot", response_text)
+    
     return jsonify({"answer": response_text})
 
 # --- API UPLOAD FILE MỚI ---
@@ -63,6 +78,17 @@ def upload_file():
     
     return jsonify({"status": "error", "message": "Chỉ chấp nhận file PDF!"})
 
+@app.route("/get_history", methods=["GET"])
+def get_chat_history():
+    """Get chat history for a specific session."""
+    session_id = request.args.get("session_id")
+    
+    if not session_id:
+        return jsonify({"error": "session_id is required"}), 400
+    
+    messages = get_history(session_id)
+    return jsonify({"messages": messages})
+
 if __name__ == '__main__':
     print("🏥 Server Bạch Mai đang chạy tại http://localhost:5001")
-    app.run(host="0.0.0.0", port=5001, debug=True)
+    app.run(host="0.0.0.0", port=5001, debug=False)

@@ -3,6 +3,35 @@ document.addEventListener('DOMContentLoaded', function () {
     const loading = document.getElementById('loading');
     const input = document.getElementById('user-input');
     
+    // --- PERSISTENT CHAT HISTORY ---
+    // Generate or retrieve session_id from localStorage
+    let sessionId = localStorage.getItem('chatbot_session_id');
+    if (!sessionId) {
+        sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('chatbot_session_id', sessionId);
+    }
+    
+    // Load chat history when page loads
+    async function loadChatHistory() {
+        try {
+            const response = await fetch(`/get_history?session_id=${encodeURIComponent(sessionId)}`);
+            const data = await response.json();
+            
+            if (data.messages && Array.isArray(data.messages)) {
+                for (const message of data.messages) {
+                    displayMessage(message.role, message.content);
+                }
+                scrollToBottom();
+            }
+        } catch (err) {
+            console.error('Error loading chat history:', err);
+        }
+    }
+    
+    // Load history on page load
+    loadChatHistory();
+    // --- END PERSISTENT CHAT HISTORY ---
+    
     // --- PHẦN MỚI: XỬ LÝ UPLOAD FILE ---
     const fileInput = document.getElementById('file-upload');
 
@@ -79,6 +108,27 @@ document.addEventListener('DOMContentLoaded', function () {
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
+    function displayMessage(role, content) {
+        const str_time = formatTime(new Date());
+        
+        if (role === 'user') {
+            const userHtml = document.createElement('div');
+            userHtml.className = 'd-flex justify-content-end mb-4';
+            userHtml.innerHTML = `<div class="msg_cotainer_send">${escapeHtml(content)}<span class="msg_time_send">${str_time}</span></div><div class="img_cont_msg"><img src="https://cdn-icons-png.flaticon.com/512/1077/1077114.png" class="rounded-circle user_img_msg"></div>`;
+            chatBox.appendChild(userHtml);
+        } else if (role === 'bot') {
+            const botResponse = marked.parse(content || '');
+            const botHtml = document.createElement('div');
+            botHtml.className = 'd-flex justify-content-start mb-4';
+            botHtml.innerHTML = `<div class="img_cont_msg"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Logo_Bach_Mai_Hospital.png/600px-Logo_Bach_Mai_Hospital.png" class="rounded-circle user_img_msg"></div><div class="msg_cotainer">${botResponse}<span class="msg_time">${str_time}</span></div>`;
+            chatBox.appendChild(botHtml);
+        }
+    }
+
+    function scrollToBottom() {
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
     async function sendMessage() {
         const rawText = input.value && input.value.trim();
         if (!rawText) return;
@@ -98,7 +148,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const resp = await fetch('/get_response', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ msg: rawText })
+                body: JSON.stringify({ msg: rawText, session_id: sessionId })
             });
             const data = await resp.json();
             loading.style.display = 'none';
