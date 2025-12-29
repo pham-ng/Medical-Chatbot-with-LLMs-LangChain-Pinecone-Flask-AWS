@@ -1,0 +1,78 @@
+name: Deploy Application Docker Image to EC2 instance
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  Continuous-Integration:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPO }}
+          IMAGE_TAG: latest
+        run: |
+          # Build và Push ảnh lên ECR
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          # Xuất biến output theo cú pháp mới của Github Actions
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+  Continuous-Deployment:
+    needs: Continuous-Integration
+    runs-on: ubuntu-latest  # Sửa từ self-hosted thành ubuntu-latest để dùng SSH
+    steps:
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}      # IP của EC2
+          username: ${{ secrets.EC2_USER }}  # Thường là 'ubuntu'
+          key: ${{ secrets.EC2_SSH_KEY }}    # Key .pem
+          envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_DEFAULT_REGION,PINECONE_API_KEY,OPENAI_API_KEY,ECR_REGISTRY,ECR_REPOSITORY
+          script: |
+            # 1. Cài đặt AWS CLI nếu chưa có (để login ECR)
+            if ! command -v aws &> /dev/null; then
+                sudo apt-get update && sudo apt-get install -y awscli
+            fi
+
+            # 2. Đăng nhập vào ECR từ bên trong EC2
+            aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            aws configure set default.region ${{ secrets.AWS_DEFAULT_REGION }}
+            
+            # Lấy lệnh login và thực thi
+            aws ecr get-login-password --region ${{ secrets.AWS_DEFAULT_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com
+
+            # 3. Pull ảnh mới về (Dùng biến ECR_REPO từ Secrets)
+            docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com/${{ secrets.ECR_REPO }}:latest
+
+            # 4. Dọn dẹp container cũ (Để tránh lỗi trùng tên/trùng cổng)
+            docker stop medical-bot || true
+            docker rm medical-bot || true
+
+            # 5. Chạy container mới (SỬA PORT Ở ĐÂY: 8080:5001)
+            docker run -d \
+              --name medical-bot \
+              -p 8080:5001 \
+              -e PINECONE_API_KEY="${{ secrets.PINECONE_API_KEY }}" \
+              -e PINECONE_API_ENV="${{ secrets.PINECONE_API_ENV }}" \
+              -e OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
+              -e COHERE_API_KEY="${{ secrets.COHERE_API_KEY }}" \
+              ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com/${{ secrets.ECR_REPO }}:latest
