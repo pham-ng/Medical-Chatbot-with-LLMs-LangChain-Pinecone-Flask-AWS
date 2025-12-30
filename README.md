@@ -220,12 +220,19 @@ open up localhost:
 
 # 7. Setup github secrets:
 
-   - AWS_ACCESS_KEY_ID
-   - AWS_SECRET_ACCESS_KEY
-   - AWS_DEFAULT_REGION
-   - ECR_REPO
-   - PINECONE_API_KEY
-   - OPENAI_API_KEY
+- AWS_ACCESS_KEY_ID
+- AWS_ACCOUNT_ID
+- AWS_DEFAULT_REGION
+- AWS_SECRET_ACCESS_KEY
+- COHERE_API_KEY
+- EC2_HOST
+- EC2_SSH_KEY
+- EC2_USER
+- ECR_REPO
+- OPENAI_API_KEY
+- PINECONE_API_ENV
+- PINECONE_API_KEY
+<img width="1601" height="358" alt="image" src="https://github.com/user-attachments/assets/150e118e-9e36-47bc-9222-783c5af7757c" />
 
 ## 🖥️ Giao Diện Người Dùng
 Hệ thống tích hợp một giao diện đơn giản, trực quan:
