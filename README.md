@@ -50,22 +50,18 @@ Hệ thống hoạt động theo luồng RAG Pipeline tiêu chuẩn:
 
 <img width="1067" height="448" alt="image" src="https://github.com/user-attachments/assets/b24e7393-68c3-4892-9474-f41a66997eb6" />
 
-## 📚 Bộ Dữ Liệu (Dataset)
-Nguồn dữ liệu được trích xuất trực tiếp từ bộ sách The Gale Encyclopedia of Medicine và các tài liệu y khoa chính thống (Medical Textbooks/Guidelines),tài liệu giáo trình từ Đại Học Y Hà Nội, phác đồ của Bộ Y Tế  vv,nhằm đảm bảo kiến thức được cung cấp có tính chuyên môn cao và hạn chế tối đa việc mô hình tự suy diễn sai lệch (hallucination).
+## 📚 Bộ Dữ Liệu & Quy Trình Xử Lý (Dataset & ETL)
 
-Quy trình xử lý dữ liệu (ETL Pipeline) bao gồm các bước:
+### 1. Nguồn dữ liệu (Data Sources)
+Hệ thống được xây dựng dựa trên nguồn tri thức y khoa uy tín, đảm bảo tính chính xác và hạn chế ảo giác (hallucination):
+* **Tài liệu quốc tế:** Bộ sách *The Gale Encyclopedia of Medicine* (Tiêu chuẩn vàng về tra cứu y học).
+* **Tài liệu trong nước:** Giáo trình chính quy từ **Đại học Y Hà Nội**.
+* **Hướng dẫn điều trị:** Phác đồ điều trị và hướng dẫn chẩn đoán mới nhất từ **Bộ Y Tế Việt Nam**.
 
-- Thu thập (Ingestion): Tập hợp các tài liệu y khoa định dạng PDF chất lượng cao, chứa thông tin chi tiết về hàng ngàn loại bệnh lý, triệu chứng, xét nghiệm và phác đồ điều trị.
-
-- Tiền xử lý (Pre-processing): Sử dụng PyPDFLoader để trích xuất văn bản thô, thực hiện chuẩn hóa dữ liệu, loại bỏ các ký tự nhiễu, header/footer và các định dạng không cần thiết để làm sạch văn bản.
-
-- Chia nhỏ & Mã hóa (Chunking & Embedding):
-
-- Sử dụng kỹ thuật Recursive Character Text Splitter để chia văn bản thành các đoạn nhỏ (chunks) với kích thước tối ưu (ví dụ: chunk_size=500, chunk_overlap=20), đảm bảo giữ nguyên ngữ cảnh của các câu văn.
-
-- Mã hóa các chunks này thành vector bằng mô hình text-embedding-ada-002 và lưu trữ vào Vector Database (Pinecone).
-
-- Thống kê dữ liệu: đã xử lý bộ tài liệu gốc bao gồm hơn 3.300 trang kiến thức y khoa chuyên sâu. Sau quá trình chunking, hệ thống thu được tổng cộng 7.020 vector chunks, tạo thành cơ sở tri thức (Knowledge Base) vững chắc cho quá trình truy xuất của Chatbot.
+### 📊 Thống kê dữ liệu (Statistics)
+> Hệ thống hiện tại đã xử lý và đánh chỉ mục (index) thành công:
+> * **3.300+** trang tài liệu chuyên sâu.
+> * **7.020** vector chunks sẵn sàng cho việc truy xuất.
   
 ## 🔍 Quy Trình Xử Lý & Triển Khai (Processing Pipeline)
 
@@ -77,16 +73,22 @@ Hệ thống vận hành dựa trên kiến trúc **RAG (Retrieval-Augmented Gen
 * **Mục tiêu:** Đảm bảo ngữ cảnh không bị cắt giữa chừng. Mỗi chunk được gắn metadata chi tiết (*Tên sách, Số trang, Loại bệnh*) để phục vụ trích dẫn nguồn chính xác.
 
 ### 2. Mã hóa Vector (Embedding)
-* **Mô hình:** `text-embedding-ada-002` (OpenAI).
-* **Đặc điểm:** Chuyển đổi văn bản sang vector **1536 chiều**.
+* **Mô hình:** `intfloat/multilingual-e5-base` (Huggingface).
+* **Đặc điểm:** Chuyển đổi văn bản sang vector **768 chiều**.
 * **Ưu điểm:** Khả năng bắt ngữ nghĩa (semantic) vượt trội, giúp hệ thống hiểu được ý định người dùng ngay cả khi từ khóa không khớp hoàn toàn (khác với tìm kiếm từ khóa truyền thống).
 
-### 3. Tìm kiếm & Sàng lọc (Retrieval & Rerank)
-Đây là bước quan trọng nhất để loại bỏ "ảo giác" (Hallucination):
-* **Bước 1 - Vector Search:** Truy vấn người dùng được vector hóa và quét trên **Pinecone** để lấy ra `Top-K` đoạn văn bản liên quan nhất.
-* **Bước 2 - Re-ranking:** Sử dụng mô hình **Cohere Rerank**.
-    > *Tại sao cần bước này?* Vector search đôi khi trả về kết quả "có vẻ liên quan" nhưng sai ngữ cảnh. Cohere sẽ đóng vai trò giám khảo, chấm điểm lại và chỉ giữ những đoạn văn thực sự trả lời đúng câu hỏi.
+### 3. Tìm kiếm & Sàng lọc (Hybrid Retrieval & Rerank)
+Hệ thống áp dụng chiến lược **Hybrid Search** (Tìm kiếm lai) để tối ưu hóa độ chính xác:
 
+* **Bước 1 - Truy xuất đa chiều (Hybrid Retrieval):**
+    Kết hợp kết quả từ hai luồng tìm kiếm song song trên **Pinecone**:
+    * **Keyword Search (BM25):** Tập trung bắt chính xác các từ khóa chuyên ngành, tên thuốc, hoặc các thuật ngữ y khoa cụ thể (Sparse Vector).
+    * **Semantic Search (Dense Vector):** Tìm kiếm dựa trên sự tương đồng về ngữ nghĩa, giúp hệ thống hiểu được ý định người dùng ngay cả khi không dùng từ khóa chính xác.
+
+* **Bước 2 - Tái xếp hạng (Re-ranking):**
+    * Sử dụng mô hình **Cohere Rerank**.
+    * > *Tại sao cần bước này?* Việc gộp kết quả từ Hybrid Search có thể tạo ra danh sách dài chứa cả những thông tin nhiễu. Cohere đóng vai trò "giám khảo", đọc hiểu sâu từng đoạn văn và chấm điểm lại, chỉ giữ lại những đoạn thực sự trả lời đúng câu hỏi của người dùng để gửi cho AI xử lý.
+      
 ### 4. Sinh câu trả lời (Generation)
 * **Mô hình:** `GPT-4o` (hoặc GPT-3.5 Turbo).
 * **Cơ chế:**
