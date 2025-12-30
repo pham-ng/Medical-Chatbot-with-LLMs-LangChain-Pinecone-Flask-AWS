@@ -7,6 +7,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-dev \
     curl \
     git \
+    ca-certificates \
+    libffi-dev \
+    libssl-dev \
+    zlib1g-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libtiff5-dev \
+    libopenjp2-7-dev \
+    rustc \
+    cargo \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
